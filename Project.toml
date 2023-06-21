@@ -1,0 +1,10 @@
+name = "JustSayItRecipes"
+uuid = "5f0f6034-5e1f-4266-9975-6d64210e83f7"
+authors = ["Samuel Omlin <samuel.omlin@cscs.ch>"]
+version = "0.1.0"
+
+[deps]
+JustSayIt = "d7252348-293e-4f11-8d42-c8418dda4315"
+
+[compat]
+#JustSayIt = "0.3.0" #TODO: to be finalized and released
