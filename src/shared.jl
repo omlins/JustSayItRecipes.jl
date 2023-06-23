@@ -1,0 +1,1 @@
+const RECIPES_PREFIX = joinpath(@__DIR__, "..", "recipes")
