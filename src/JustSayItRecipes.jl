@@ -1,18 +1,17 @@
 """
 Module JustSayItRecipes
 
-Easily accessible and updatable collection of scripts to start JustSayIt as well as predefined command dictionaries for a quick assembly of a personalized voice assistant.
+Thin companion package to JustSayIt for maintained JustSayIt recipes - command dictionaries and scripts to start JustSayIt - and utilities to use and manage them. These recipes can be used as they are, or modified and extended to assemble a personalized voice assistant.
 
 # General overview and examples
 https://github.com/omlins/JustSayItRecipes.jl
 
-# Recipe usage example.
+# Package usage example.
 ```
 > julia
 julia> using JustSayItRecipes
-julia> JustSayItRecipes.@include("ubuntu_max.jl")
+julia> JustSayItRecipes.@run("ubuntu_max.jl")
 ```
-Type `?JustSayItRecipes.@include` to learn about this macro.
 """
 module JustSayItRecipes
 
@@ -24,7 +23,7 @@ using .Exceptions
 include("shared.jl")
 
 ## Alphabetical include of files
-include("include.jl")
+include("run.jl")
 
 ## Exports (need to be after include of submodules if re-exports from them)
 
