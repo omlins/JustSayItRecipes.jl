@@ -20,4 +20,4 @@ function _run(caller::Module, path)
     end
 end
 
-checkargs_include(args...) = if (length(args) != 1) @ArgumentError("wrong number of arguments.") end
+checkargs_run(args...) = if (length(args) != 1) @ArgumentError("wrong number of arguments.") end

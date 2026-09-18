@@ -62,3 +62,34 @@ function variant_suffixes()
     end
     return [VARIANT_SUFFIXES[o] for o in variant_chain(os)]
 end
+
+## Unit test helpers (not public, not exported — for internal use by test files)
+# Usage in test files (add @throws_pt only if used directly): import JustSayItRecipes: @test_throws_pt
+
+# Returns true if macroexpand throws the expected exception type, false otherwise.
+# Usage: @test @throws_pt(ArgumentError, JustSayItRecipes.@edit("a", "b"))
+macro throws_pt(ex_type, ex)
+    local mod = __module__
+    local et = ex_type
+    local e = ex
+    return quote
+        local caught = try
+            macroexpand($(QuoteNode(mod)), $(QuoteNode(e)))
+            false
+        catch exc
+            exc isa $(esc(et))
+        end
+        caught
+    end
+end
+
+# Like Test.@test_throws, but for errors thrown at macro expansion time.
+# Rewrites to: @test JustSayItRecipes.@throws_pt(ex_type, ex)
+# Usage: @test_throws_pt ArgumentError JustSayItRecipes.@edit("a", "b")
+macro test_throws_pt(ex_type, ex)
+    local et = ex_type
+    local e = ex
+    return esc(quote
+        Test.@test(JustSayItRecipes.@throws_pt($et, $e))
+    end)
+end
