@@ -23,8 +23,15 @@ using .Exceptions
 include("shared.jl")
 
 ## Alphabetical include of files
+include("edit.jl")
+include("include.jl")
+include("path.jl")
 include("run.jl")
 
-## Exports (need to be after include of submodules if re-exports from them)
+## Public but not exported (enforces usage with `JustSayItRecipes.` prefix, which makes it clearer that the JustSayItRecipes recipes path is prepended to the input path)
+public @run, @edit, @path
+
+## Exported
+export @include
 
 end # module JustSayItRecipes
