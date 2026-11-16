@@ -1,0 +1,3 @@
+# Firefox executable: Ubuntu
+
+`firefox`

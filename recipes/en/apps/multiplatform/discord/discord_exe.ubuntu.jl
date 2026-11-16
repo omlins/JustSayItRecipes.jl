@@ -1,0 +1,3 @@
+# Discord executable: Ubuntu
+
+`discord`

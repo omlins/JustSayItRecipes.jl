@@ -1,0 +1,3 @@
+# Zoom executable: Ubuntu
+
+`zoom`

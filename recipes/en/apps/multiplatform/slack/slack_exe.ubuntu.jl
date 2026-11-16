@@ -1,0 +1,3 @@
+# Slack executable: Ubuntu
+
+`slack`
