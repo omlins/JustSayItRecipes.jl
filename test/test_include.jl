@@ -8,26 +8,44 @@ import JustSayItRecipes: @test_throws_pt
     # (a) Dot in argument is rejected
     @test_throws ArgumentError JustSayItRecipes._include_resolved(Main, "commands.jl")
 
-    # (b) Variant suffix selection: leaf_simple → leaf_simple.ubuntu.jl (on Ubuntu)
-    JustSayItRecipes._include_resolved(Main, "leaf_simple")
-    @test Core.eval(Main, :LEAF_SIMPLE_INCLUDED) == true
-    Core.eval(Main, :(LEAF_SIMPLE_INCLUDED = nothing))
+    # (b) Variant suffix selection: leaf_simple.ubuntu.jl is a single value (`true`)
+    @test JustSayItRecipes._include_resolved(Main, "leaf_simple") == true
 
-    # (c) Bare fallback: leaf_bare has no variant file, only leaf_bare.jl
-    JustSayItRecipes._include_resolved(Main, "leaf_bare")
-    @test Core.eval(Main, :LEAF_BARE_INCLUDED) == true
-    Core.eval(Main, :(LEAF_BARE_INCLUDED = nothing))
+    # (c) Bare fallback: leaf_bare.jl (no variant) is a single value (`true`)
+    @test JustSayItRecipes._include_resolved(Main, "leaf_bare") == true
 
-    # (d) Nested @include rejected: fixture_has_include.jl contains @include
+    # (d) Nested @include rejected in VARIANT files:
+    #     fixture_has_include.ubuntu.jl is a single expression (@include), but it
+    #     IS a variant file → ArgumentError from _contains_include_macro.
     @test_throws ArgumentError JustSayItRecipes._include_resolved(Main, "fixture_has_include")
 
     # (e) Missing leaf: no variant or bare file exists; Base.include errors
     @test_throws SystemError JustSayItRecipes._include_resolved(Main, "does_not_exist")
 
-    # (f) Backslash normalization: sub\leaf_sub resolves to sub/leaf_sub.ubuntu.jl
-    JustSayItRecipes._include_resolved(Main, "sub\\leaf_sub")
-    @test Core.eval(Main, :LEAF_SUB_INCLUDED) == true
-    Core.eval(Main, :(LEAF_SUB_INCLUDED = nothing))
+    # (f) Backslash normalization: sub\leaf_sub.ubuntu.jl is a single value (`true`)
+    @test JustSayItRecipes._include_resolved(Main, "sub\\leaf_sub") == true
+
+    # (g) Bare file with @include: only leaf_with_include.jl exists (no variant),
+    #     it is a single expression (@include) so single-value check passes and,
+    #     being a bare file, the no-nested-@include check is skipped. The inner
+    #     include then fails with LoadError (wrapping SystemError from Base.include).
+    @test_throws LoadError JustSayItRecipes._include_resolved(Main, "leaf_with_include")
+
+    # (h) Single-value acceptance: leaf_no_symbol.ubuntu.jl contains only `42`,
+    #     which is a valid single value (previously rejected for not assigning a
+    #     matching symbol).
+    @test JustSayItRecipes._include_resolved(Main, "leaf_no_symbol") == 42
+
+    # (i) Single-value acceptance (bare): same as (h) for a bare file.
+    @test JustSayItRecipes._include_resolved(Main, "leaf_no_symbol_bare") == 42
+
+    # (j) Single-value rejection: two_exprs.ubuntu.jl contains two assignments
+    #     → ArgumentError (expected exactly one top-level expression).
+    @test_throws ArgumentError JustSayItRecipes._include_resolved(Main, "two_exprs")
+
+    # (k) Assignment rejection: assignment_only.ubuntu.jl is a single top-level
+    #     expression, but it is an assignment → ArgumentError.
+    @test_throws ArgumentError JustSayItRecipes._include_resolved(Main, "assignment_only")
 end
 
 # Part 2 (runs second): @include macro emits correct calls to _include_resolved.
