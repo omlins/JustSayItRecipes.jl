@@ -1,0 +1,95 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+    tags: '*'
+  pull_request:
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.11' # Minimum required Julia version (`public` keyword needs 1.11).
+          - '1.12'
+          - '1'   # Latest stable 1.x release of Julia
+          #- 'nightly'
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+        arch:
+          - default
+        include:
+          # On Windows, julia-runtest internally hard-codes shell: bash for its test step
+          # (confirmed from the action.yml source: "steps: Run the package tests ... shell: bash").
+          # On Windows runners, bash = git-bash/mSys → julia runs with MSys socket-backed stdio,
+          # which Windows CreateProcessW rejects ("could not spawn ... EBADF/ENOTSUP") the moment
+          # Julia spawns a subprocess (the JustSayItRecipes tests spawn julia subprocesses for
+          # every test file via test/runtests.jl). Interposing PowerShell between bash and julia
+          # fixes it: PowerShell creates proper native pipe handles for the julia process
+          # (documented behavior for native executables – it never passes MSYS socket handles
+          # through to CreateProcess), so julia's subsequent subprocess spawns succeed.
+          # NOTE: not yet verified for JustSayItRecipes – check this job on the first CI run.
+          - os: windows-latest
+            prefix: pwsh -Command
+        exclude:
+          - os: macOS-latest
+            arch: x86  # 32-bit Julia binaries are not available on macOS
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: actions/cache@v5
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ env.cache-name }}-
+            ${{ runner.os }}-test-
+            ${{ runner.os }}-
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          prefix: ${{ matrix.prefix }}
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v6
+        with:
+          files: lcov.info
+      # - uses: julia-actions/julia-uploadcoveralls@v1
+      #   env:
+      #     COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+  # Documentation job: temporarily commented out - the JustSayItRecipes documentation will be added
+  # later (docs/Project.toml, docs/make.jl, docs/src/ and docs/buildtest.jl need to be created;
+  # docs/test_toml with the Documenter environment already exists). Re-activate this job at that
+  # point. NOTE for re-activation: julia-docdeploy requires the DOCUMENTER_KEY secret (a deploy key
+  # with write access) to be set in the repository settings.
+  # docs:
+  #   name: Documentation
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #     - uses: julia-actions/setup-julia@v3
+  #       with:
+  #         version: '1'
+  #     - uses: julia-actions/julia-buildpkg@v1
+  #     - uses: julia-actions/julia-docdeploy@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+  #     - run: |
+  #         julia --project=docs/test_toml -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+  #     - run: |
+  #         julia --project=docs/test_toml docs/buildtest.jl
